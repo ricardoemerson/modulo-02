@@ -49,6 +49,18 @@ export default class Main extends Component {
     try {
       const { newRepo, repositories } = this.state;
 
+      // Verifica se o usuário deixou o input em branco.
+      if (newRepo === '') {
+        throw new Error('Você precisa informar um repositório');
+      }
+
+      // Verifica se o repositório já existe.
+      const repoExists = repositories.find(repository => repository.name === newRepo);
+
+      if (repoExists) {
+        throw new Error('Repositório duplicado');
+      }
+
       const response = await api.get(`/repos/${ newRepo }`);
 
       const data = {
