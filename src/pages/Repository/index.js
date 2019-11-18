@@ -7,7 +7,7 @@ import api from '../../services/api';
 
 import Container from '../../components/Container';
 import {
-  Loading, Owner, IssueList, IssueFilter,
+  Loading, Owner, IssueList, IssueFilter, PageActions,
 } from './styles';
 
 class Repository extends Component {
@@ -21,11 +21,13 @@ class Repository extends Component {
       { state: 'closed', title: 'Fechadas', active: false },
     ],
     filterIndex: 0,
+    loadingFilteredData: false,
+    page: 1,
   }
 
   async componentDidMount() {
     const { match } = this.props;
-    const { filterState, filterIndex } = this.state;
+    const { filterState, filterIndex, page } = this.state;
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -35,6 +37,7 @@ class Repository extends Component {
         params: {
           state: filterState[filterIndex].state,
           per_page: 5,
+          page,
         },
       }),
     ]);
@@ -48,7 +51,9 @@ class Repository extends Component {
 
   loadIssues = async () => {
     const { match } = this.props;
-    const { filterState, filterIndex } = this.state;
+    const { filterState, filterIndex, page } = this.state;
+
+    this.setState({ loadingFilteredData: true });
 
     const repoName = decodeURIComponent(match.params.repository);
 
@@ -56,10 +61,11 @@ class Repository extends Component {
       params: {
         state: filterState[filterIndex].state,
         per_page: 5,
+        page,
       },
     });
 
-    this.setState({ issues: response.data });
+    this.setState({ issues: response.data, loadingFilteredData: false });
   };
 
   handleFilter = async filterIndex => {
@@ -67,9 +73,19 @@ class Repository extends Component {
     this.loadIssues();
   };
 
+  handlePagination = async action => {
+    const { page } = this.state;
+
+    await this.setState({
+      page: action === 'previous' ? page - 1 : page + 1,
+    });
+
+    this.loadIssues();
+  };
+
   render() {
     const {
-      loading, repository, issues, filterIndex, filterState,
+      loading, repository, issues, filterIndex, filterState, loadingFilteredData, page,
     } = this.state;
 
     if (loading) {
@@ -85,7 +101,7 @@ class Repository extends Component {
           <p>{ repository.description }</p>
         </Owner>
 
-        <IssueList>
+        <IssueList loadingFilteredData={ loadingFilteredData ? 1 : 0 }>
           <IssueFilter active={ filterIndex }>
             { filterState.map((filter, index) => (
               <button
@@ -114,6 +130,22 @@ class Repository extends Component {
             </li>
           )) }
         </IssueList>
+
+        <PageActions>
+          <button
+            type="button"
+            disabled={ page < 2 }
+            onClick={ () => this.handlePagination('previous') }
+          >
+            Anterior
+          </button>
+
+          <span>Página { page }</span>
+
+          <button type="button" onClick={ () => this.handlePagination('next') }>
+            Próximo
+          </button>
+        </PageActions>
       </Container>
     );
   }
